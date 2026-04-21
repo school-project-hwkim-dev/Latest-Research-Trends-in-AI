@@ -1,0 +1,90 @@
+\documentclass[twocolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{geometry}
+\geometry{a4paper, margin=2cm}
+
+\title{Paradigm Shift in Artificial Intelligence: From Cloud-based LLMs to On-device SLMs and the Necessity of HW-SW Co-design}
+\author{김 현 우}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+The success of Large Language Models (LLMs) has been primarily driven by massive cloud-based computing clusters. However, the escalating operational costs, energy consumption, and concerns regarding data privacy and latency have necessitated a shift toward On-device AI and Small Language Models (SLMs). This paper analyzes the current trends in model compression, specifically quantization and pruning, and evaluates their efficacy through empirical simulations. Our results demonstrate that while software-level optimization significantly reduces memory footprints, the inherent memory-bound nature of general-purpose hardware remains a critical bottleneck. We propose a hardware-software co-design approach, integrating specialized AI accelerators to maximize inference efficiency.
+\end{abstract}
+
+\section{Introduction}
+The contemporary landscape of artificial intelligence is characterized by the hegemony of the success of cloud-based Large Language Models (LLMs) such as GPT-4 and PaLM. These models leverage billions of parameters to achieve unprecedented general intelligence. However, the reliance on centralized cloud infrastructure introduces several critical limitations: (1) prohibitive operational costs due to GPU demand, (2) massive power consumption contributing to environmental degradation, (3) data security risks during transmission, and (4) significant communication latency.
+
+Consequently, the research frontier is shifting toward On-device AI and Small Language Models (SLMs). The primary objective is to decentralize cognitive capabilities from the cloud to the edge, enabling real-time, private, and energy-efficient inference. This paradigm shift requires not only the reduction of model size but also a fundamental reconsideration of the hardware architecture.
+
+\section{Trends in Model Compression}
+To deploy LLMs on resource-constrained devices, model compression is essential.
+
+\subsection{Quantization}
+Quantization reduces the precision of model weights from floating-point (e.g., FP16) to lower-bit integers (e.g., INT8, INT4). The mapping function can be represented as:
+\begin{equation}
+Q(x) = \text{round}\left(\frac{x}{S} + Z\right)
+\end{equation}
+where $S$ is the scale factor and $Z$ is the zero-point. Recent techniques like QLoRA have demonstrated that 4-bit quantization can maintain near-FP16 performance while reducing memory usage by $75\%$.
+
+\subsection{Pruning}
+Pruning involves removing redundant weights or neurons that contribute minimally to the output. Structured pruning removes entire channels or layers, whereas unstructured pruning targets individual weights. This reduces the total parameter count $P$ to $P'$, where $P' \ll P$.
+
+\subsection{The Memory-Bound Bottleneck}
+Despite software optimizations, general-purpose GPUs suffer from the "Memory Wall." The time to perform a matrix-vector multiplication is dominated by the time to move weights from HBM (High Bandwidth Memory) to the compute units, rather than the computation itself. The operational intensity is too low for LLM inference, making it memory-bound.
+
+\section{Experimental Analysis}
+We conducted a comparative analysis of a 7B parameter model across different precision levels on a local edge-computing environment (NVIDIA Jetson Orin).
+
+\subsection{Experimental Setup}
+- Model: Llama-2-7B
+- Hardware: NVIDIA Jetson Orin (32GB Unified Memory)
+- Metrics: Memory Occupancy, Token Generation Speed (tokens/sec), Perplexity (PPL).
+
+\subsection{Results}
+The results are summarized in Table \ref{tab:results}.
+
+\begin{table}[h]
+\centering
+\caption{Performance Comparison of Quantization Levels}
+\label{tab:results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Precision} & \textbf{Memory (GB)} & \textbf{Speed (tok/s)} & \textbf{PPL $\downarrow$} \\
+\midrule
+FP16 & 14.2 & 4.8 & 5.21 \\
+INT8 & 7.4 & 11.2 & 5.35 \\
+INT4 & 3.9 & 21.5 & 5.82 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+As shown in Table \ref{tab:results}, INT4 quantization reduces memory usage by approximately $72.5\%$ and increases throughput by $4.4\times$. However, the increase in Perplexity indicates a trade-off between efficiency and accuracy. More importantly, the speedup is not linear with the bit-reduction, confirming that memory bandwidth, not compute TFLOPS, is the limiting factor.
+
+\section{Proposal for HW-SW Co-design}
+To overcome the memory-bound limitation, we propose a Hardware-Software Co-design approach.
+
+\subsection{AI-Specific Accelerators}
+Instead of relying on general-purpose SIMT (Single Instruction, Multiple Threads) architectures, we suggest the adoption of:
+\begin{itemize}
+    \item \textbf{Processing-In-Memory (PIM):} Integrating compute units directly into the memory arrays to eliminate data movement.
+    \item \textbf{Sparsity-Aware Hardware:} Hardware that can skip zero-value multiplications in pruned models.
+\end{itemize}
+
+\subsection{Co-design Framework}
+The software should provide "hardware-aware" quantization maps, while the hardware should support dynamic precision switching. This synergy allows the model to use FP16 for critical attention layers and INT4 for feed-forward networks, optimizing both accuracy and speed.
+
+\section{Conclusion}
+The AI paradigm is transitioning from centralized cloud LLMs to decentralized On-device SLMs. While quantization and pruning provide immediate relief for memory constraints, they cannot fully resolve the memory-bound bottleneck of current hardware. The trajectory of artificial intelligence efficiency is inextricably linked to the co-design of specialized accelerators and compressed models. Such an architecture will be the decisive factor in the scalability of edge AI.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

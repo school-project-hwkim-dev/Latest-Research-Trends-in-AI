@@ -1,0 +1,31 @@
+# Global ignore: Ignore everything by default
+*
+
+# Allow the following essentials:
+!main.tex
+!main.pdf
+!references.bib
+!README.md
+!.gitignore
+
+# Specifically ignore LaTeX auxiliary files (even though they are ignored by * above, it's good practice)
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
+# Ignore AI-specific logs or configurations
+GEMINI.md
+agents.md
+paper_peer_review.md
+paper_peer_review_v2.md
+run_agent_paper.py
+plan.md
+.gemini/
+.env
+.DS_Store
