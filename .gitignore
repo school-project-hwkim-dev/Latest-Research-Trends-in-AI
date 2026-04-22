@@ -26,6 +26,8 @@ paper_peer_review.md
 paper_peer_review_v2.md
 run_agent_paper.py
 plan.md
+ROADMAP.md
+*.log
 .gemini/
 .env
 .DS_Store
