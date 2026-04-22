@@ -3,8 +3,11 @@
 
 !main.tex
 !main.pdf
+!main_ko.tex
+!main_ko.pdf
 !references.bib
 !README.md
+!.latexmkrc
 !.gitignore
 
 # LaTeX build output
@@ -29,3 +32,6 @@ ROADMAP.md
 .gemini/
 .env
 .DS_Store
+
+
+작년예시

@@ -1,11 +1,61 @@
-\documentclass[twocolumn]{article}
-\usepackage[utf8]{inputenc}
+\documentclass[twocolumn,10pt]{article}
+\usepackage{iftex}
+\ifPDFTeX
+    \usepackage[utf8]{inputenc}
+    \usepackage[T1]{fontenc}
+\else
+    \usepackage{fontspec}
+    \setmainfont{TeX Gyre Termes}
+    \setsansfont{TeX Gyre Heros}
+    \setmonofont{TeX Gyre Cursor}
+\fi
+\usepackage{kotex}
+\ifPDFTeX\else
+    \setmainhangulfont[AutoFakeSlant=0.15]{Noto Serif CJK KR}
+    \setsanshangulfont[AutoFakeSlant=0.15]{Noto Sans CJK KR}
+\fi
 \usepackage{amsmath, amssymb, amsfonts}
 \usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
 \usepackage{graphicx}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,shapes.geometric,shapes.misc,decorations.pathreplacing,backgrounds}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{caption}
 \usepackage{cite}
 \usepackage{geometry}
-\geometry{a4paper, margin=2cm}
+\usepackage{microtype}
+\usepackage{hyperref}
+\geometry{a4paper, margin=1.8cm}
+\setlength{\columnsep}{0.7cm}
+\setlength{\parskip}{0.15em}
+\emergencystretch=2em
+
+\definecolor{AIInk}{HTML}{1B2633}
+\definecolor{CloudBlue}{HTML}{2868C7}
+\definecolor{EdgeGreen}{HTML}{1E8A5A}
+\definecolor{WarmGold}{HTML}{C88719}
+\definecolor{AlertRed}{HTML}{C84A4A}
+\definecolor{PanelGray}{HTML}{F2F5F7}
+\definecolor{LineGray}{HTML}{6D7B88}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=CloudBlue,
+    citecolor=EdgeGreen,
+    urlcolor=CloudBlue
+}
+\captionsetup{font=small,labelfont=bf}
+\tikzset{
+    stage/.style={draw=AIInk!55, fill=#1, rounded corners=2pt, very thick, align=center, inner sep=5pt, font=\sffamily\small},
+    chip/.style={draw=AIInk!55, fill=#1, rounded corners=1pt, line width=0.7pt, align=center, inner sep=4pt, font=\sffamily\scriptsize},
+    flow/.style={-{Stealth[length=2.2mm]}, very thick, draw=AIInk!78},
+    softflow/.style={-{Stealth[length=2mm]}, thick, draw=LineGray!85},
+    metric/.style={draw=AIInk!45, fill=white, rounded corners=1.5pt, align=center, inner sep=3pt, font=\sffamily\scriptsize}
+}
 
 \title{Paradigm Shift in Artificial Intelligence: From Cloud-based LLMs to On-device SLMs and the Necessity of HW-SW Co-design\thanks{Korean Title: 인공지능 패러다임의 전환: 클라우드 LLM에서 온디바이스 SLM으로의 이행과 하드웨어-소프트웨어 공동 설계의 필요성}}
 \author{Hyun Woo Kim}
@@ -24,6 +74,34 @@ The contemporary landscape of artificial intelligence is characterized by a rapi
 
 Consequently, the research frontier in 2026 is shifting toward "Autonomous Edge Intelligence." The objective is to deploy SLMs (e.g., Llama 3.2 \cite{llama32_2024}, Phi-4 Mini \cite{phi4_2025}, Gemma 3 \cite{gemma3_2025}, and Qwen 3 \cite{qwen3_2025}) that provide near-LLM performance with minimal memory footprints. Achieving this requires a holistic paradigm shift that moves beyond software-only model compression toward a rigorous Hardware-Software Co-design approach.
 
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[node distance=0.9cm]
+    \node[stage=CloudBlue!12, text width=3.0cm, minimum height=1.35cm] (cloud)
+        {\textbf{Cloud LLM}\\\footnotesize HBM clusters\\privacy and latency cost};
+    \node[stage=EdgeGreen!12, text width=3.0cm, minimum height=1.35cm, right=of cloud] (compress)
+        {\textbf{Compression}\\\footnotesize 1.58-bit weights\\KV cache quantization};
+    \node[stage=WarmGold!16, text width=3.0cm, minimum height=1.35cm, right=of compress] (codesign)
+        {\textbf{HW-SW Co-design}\\\footnotesize bit-serial NPU\\PIM, TEE, scheduler};
+    \node[stage=AlertRed!10, text width=3.0cm, minimum height=1.35cm, right=of codesign] (edge)
+        {\textbf{Autonomous Edge}\\\footnotesize S2S agents\\RAG/CAG and swarm};
+
+    \draw[flow] (cloud) -- node[above,font=\sffamily\scriptsize] {model shrink} (compress);
+    \draw[flow] (compress) -- node[above,font=\sffamily\scriptsize] {dataflow match} (codesign);
+    \draw[flow] (codesign) -- node[above,font=\sffamily\scriptsize] {sustained service} (edge);
+
+    \node[metric, below=0.5cm of cloud] (m1) {$10^2$--$10^3$ W\\server-class};
+    \node[metric, below=0.5cm of compress] (m2) {$6.3\times$\\memory cut};
+    \node[metric, below=0.5cm of codesign] (m3) {$<200$ ms\\interaction target};
+    \node[metric, below=0.5cm of edge] (m4) {$<$10 W\\mobile envelope};
+    \draw[softflow] (m1) -- (m2);
+    \draw[softflow] (m2) -- (m3);
+    \draw[softflow] (m3) -- (m4);
+\end{tikzpicture}
+\caption{Paper roadmap: the central argument moves from cloud-scale model capability to edge-scale sustained intelligence. Visual emphasis is placed on the compression, memory, security, and scheduling constraints that determine whether an SLM can run continuously on-device.}
+\label{fig:roadmap}
+\end{figure*}
+
 \section{Trends in Model Compression}
 To deploy LLMs on resource-constrained devices, model compression is essential.
 
@@ -36,6 +114,37 @@ Quantization reduces the bit-depth of model weights $\mathbf{W}$ from FP16 to lo
     \end{equation}
     \item \textbf{Salience-Driven Mixed Precision (SliM):} Instead of uniform 4-bit quantization, SliM-LLM identifies "salient" weight groups through outlier analysis. It assigns higher precision (4-bit) to sensitive neurons and ultra-low precision (2-bit) to the redundant majority, achieving near-lossless 2.5-bit average precision.
 \end{itemize}
+
+The operational form used throughout this paper is:
+\begin{equation}
+\mathbf{W}_q=\operatorname{clip}_{[-1,1]}
+\left(\operatorname{round}\left(\frac{\mathbf{W}}{\gamma+\epsilon}\right)\right),
+\qquad \widehat{\mathbf{W}}=\gamma\mathbf{W}_q.
+\label{eq:ternary_quant}
+\end{equation}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=0.85cm,y=0.78cm,font=\sffamily\scriptsize]
+    \draw[->, thick, draw=AIInk] (-3.2,0) -- (3.2,0) node[right] {$W_{ij}$};
+    \draw[densely dashed, draw=LineGray] (-1.45,-0.2) -- (-1.45,1.4);
+    \draw[densely dashed, draw=LineGray] (0,-0.2) -- (0,1.4);
+    \draw[densely dashed, draw=LineGray] (1.45,-0.2) -- (1.45,1.4);
+    \node[below] at (-1.45,-0.2) {$-\gamma/2$};
+    \node[below] at (0,-0.2) {$0$};
+    \node[below] at (1.45,-0.2) {$\gamma/2$};
+    \draw[line width=4pt, draw=AlertRed!75] (-3,0.55) -- (-1.45,0.55);
+    \draw[line width=4pt, draw=WarmGold!85] (-1.45,0.85) -- (1.45,0.85);
+    \draw[line width=4pt, draw=EdgeGreen!75] (1.45,1.15) -- (3,1.15);
+    \node[anchor=west, text=AlertRed!85!black] at (-2.9,0.85) {$W_q=-1$};
+    \node[text=WarmGold!70!black] at (0,1.17) {$W_q=0$};
+    \node[anchor=east, text=EdgeGreen!70!black] at (2.9,1.47) {$W_q=+1$};
+    \draw[decorate,decoration={brace,mirror,amplitude=4pt},draw=LineGray]
+        (-1.45,-0.55) -- (1.45,-0.55) node[midway,below=5pt] {dead zone removes multiplies};
+\end{tikzpicture}
+\caption{Ternary quantization as a thresholding operation. Values near zero are routed to zero weights, while the two tails become signed additions in the NPU datapath.}
+\label{fig:ternary_map}
+\end{figure}
 
 \subsection{Theoretical Error Bounds}
 To justify the convergence of BitNet b1.58, we analyze the quantization error $\mathbf{e}$ defined as $\mathbf{e} = \mathbf{W} - \gamma \mathbf{W}_q$. Given the weight matrix $\mathbf{W} \in \mathbb{R}^{n \times m}$, the weight scaling factor $\gamma = \frac{1}{nm} \sum_{i,j} |W_{i,j}|$ is the average absolute value of all elements. The ternary weights $\mathbf{W}_q \in \{-1, 0, 1\}$ are obtained via rounding.
@@ -56,56 +165,201 @@ where $\mathbf{g}$ is the gradient and $\mathbf{H}$ is the Hessian. In BitNet tr
 
 \subsection{The KV-Cache Bottleneck}
 For long-context SLMs (e.g., 128K window), the Key-Value (KV) cache becomes the dominant memory consumer during autoregressive decoding. While weight quantization reduces the static model size, the KV cache grows linearly with sequence length. Recent techniques like \textit{KVQuant} \cite{kvquant2024} compress the cache to 2-3 bits using per-channel scaling, which is crucial for maintaining real-time latency on mobile devices with limited DRAM bandwidth.
+\begin{equation}
+M_{\mathrm{KV}} =
+\frac{2 L H d_h T b_{\mathrm{kv}}}{8\cdot 2^{30}}
+\quad [\mathrm{GB}],
+\label{eq:kv_cache}
+\end{equation}
+where $L$ is the number of transformer layers, $H$ is the number of attention heads, $d_h$ is head dimension, $T$ is context length, and $b_{\mathrm{kv}}$ is the cache precision in bits. Equation \ref{eq:kv_cache} makes the key point visible: after weight compression, context length becomes the dominant linear term.
 
 \subsection{Pruning}
 Pruning involves removing redundant weights or neurons that contribute minimally to the output. Structured pruning removes entire channels or layers, whereas unstructured pruning targets individual weights. This reduces the total parameter count $P$ to $P'$, where $P' \ll P$.
 
 \subsection{The Memory-Bound Bottleneck}
 Despite software optimizations, general-purpose GPUs suffer from the "Memory Wall." The time to perform a matrix-vector multiplication is dominated by the time to move weights from HBM (High Bandwidth Memory) to the compute units, rather than the computation itself. The operational intensity is too low for LLM inference, making it memory-bound.
+\begin{equation}
+\begin{aligned}
+P_{\mathrm{attainable}}
+&=\min\left(P_{\mathrm{peak}},\ I_{\mathrm{op}} B_{\mathrm{mem}}\right),\\
+I_{\mathrm{op}}
+&=\frac{\mathrm{FLOPs}}{\mathrm{bytes\ moved}}.
+\end{aligned}
+\label{eq:roofline}
+\end{equation}
+For autoregressive decoding, $I_{\mathrm{op}}$ is small because each new token reuses little batch-level parallelism. Thus, reducing bytes moved often improves latency more than increasing peak TOPS.
 
 \section{Experimental Analysis}
 We conducted a comparative analysis of a 3.8B parameter SLM (Phi-4 Mini class) across different precision levels on a 2026-era mobile SoC (System-on-Chip) with a dedicated Neural Processing Unit (NPU).
 
 \subsection{Experimental Setup}
-- Model: SLM-3.8B (Trained for ternary weight compatibility)
-- Hardware: 2026 Flagship Mobile SoC (Integrated 60 TOPS NPU)
-- Metrics: Memory Footprint (GB), Throughput (tokens/sec), Energy Efficiency (mJ/token).
+\begin{itemize}
+    \item \textbf{Model:} SLM-3.8B, trained for ternary weight compatibility.
+    \item \textbf{Hardware:} 2026 flagship mobile SoC with an integrated 60 TOPS NPU.
+    \item \textbf{Metrics:} memory footprint, throughput, and energy per generated token.
+\end{itemize}
+We report normalized memory reduction $R_M$, speedup $S_v$, and energy efficiency $\eta_E$ as:
+\begin{equation}
+\begin{aligned}
+R_M&=\frac{M_{\mathrm{FP16}}}{M_b},
+&
+S_v&=\frac{v_b}{v_{\mathrm{FP16}}},\\
+\eta_E&=\frac{10^3}{E_b}\ [\mathrm{tokens/J}].
+\end{aligned}
+\label{eq:efficiency_metrics}
+\end{equation}
+where $b$ denotes the target precision.
 
 \subsection{Results}
 The results are summarized in Table \ref{tab:results}.
 
-\begin{table}[h]
+\begin{table*}[t]
 \centering
 \caption{Inference Efficiency on Mobile NPU (2026 Baseline)}
 \label{tab:results}
-\begin{tabular}{lccc}
+\begin{tabular}{lccccc}
 \toprule
-\textbf{Precision} & \textbf{Memory (GB)} & \textbf{Speed (tok/s)} & \textbf{Energy (mJ/t)} \\
+\textbf{Precision} & \textbf{Memory (GB)} & \textbf{Memory Cut} & \textbf{Speed (tok/s)} & \textbf{Speedup} & \textbf{Energy Eff. (tok/J)} \\
 \midrule
-FP16 & 7.6 & 12.5 & 120.4 \\
-INT8 & 3.9 & 38.2 & 42.1 \\
-INT4 & 2.1 & 85.5 & 18.2 \\
-1.58-bit & 1.2 & 142.0 & 6.4 \\
+FP16 & 7.6 & $1.0\times$ & 12.5 & $1.0\times$ & 8.3 \\
+INT8 & 3.9 & $1.9\times$ & 38.2 & $3.1\times$ & 23.8 \\
+INT4 & 2.1 & $3.6\times$ & 85.5 & $6.8\times$ & 54.9 \\
+\rowcolor{EdgeGreen!10}
+1.58-bit & 1.2 & $6.3\times$ & 142.0 & $11.4\times$ & 156.3 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
-As shown in Table \ref{tab:results}, 1.58-bit (ternary) quantization achieves a $6.3\times$ reduction in memory compared to FP16 and a massive $11.3\times$ improvement in throughput. More importantly, the energy consumption drops by $18.8\times$, which is critical for mobile devices where battery life is the primary constraint. 
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.48\textwidth,
+    height=5.0cm,
+    ybar,
+    bar width=12pt,
+    ymin=0,
+    ylabel={Throughput (tokens/s)},
+    symbolic x coords={FP16,INT8,INT4,Ternary},
+    xtick=data,
+    xticklabels={FP16,INT8,INT4,1.58-bit},
+    nodes near coords,
+    nodes near coords style={font=\sffamily\scriptsize},
+    tick label style={font=\sffamily\scriptsize},
+    label style={font=\sffamily\small},
+    ymajorgrids,
+    grid style={LineGray!18},
+    axis line style={draw=AIInk!70},
+    enlarge x limits=0.18
+]
+\addplot[fill=CloudBlue!65,draw=CloudBlue!90] coordinates {(FP16,12.5) (INT8,38.2) (INT4,85.5) (Ternary,142.0)};
+\end{axis}
+\end{tikzpicture}
+\hfill
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.48\textwidth,
+    height=5.0cm,
+    ybar,
+    bar width=12pt,
+    ymin=0,
+    ylabel={Energy (mJ/token)},
+    symbolic x coords={FP16,INT8,INT4,Ternary},
+    xtick=data,
+    xticklabels={FP16,INT8,INT4,1.58-bit},
+    nodes near coords,
+    nodes near coords style={font=\sffamily\scriptsize},
+    tick label style={font=\sffamily\scriptsize},
+    label style={font=\sffamily\small},
+    ymajorgrids,
+    grid style={LineGray!18},
+    axis line style={draw=AIInk!70},
+    enlarge x limits=0.18
+]
+\addplot[fill=AlertRed!62,draw=AlertRed!90] coordinates {(FP16,120.4) (INT8,42.1) (INT4,18.2) (Ternary,6.4)};
+\end{axis}
+\end{tikzpicture}
+\caption{Visual comparison of throughput and energy. The ternary datapath is not merely smaller; it changes the dominant operation from multiply-accumulate to signed accumulation, which is why energy improves faster than memory alone would suggest.}
+\label{fig:perf_bars}
+\end{figure*}
+
+As shown in Table \ref{tab:results} and Figure \ref{fig:perf_bars}, 1.58-bit (ternary) quantization achieves a $6.3\times$ reduction in memory compared to FP16 and an $11.4\times$ improvement in throughput. More importantly, the energy consumption drops by $18.8\times$, which is critical for mobile devices where battery life is the primary constraint. 
 
 \subsection{Thermal and Security-Performance Trade-offs}
 A critical limitation of 2026-era mobile SoCs is the "Thermal Wall" and the emerging "Security Tax." While flagship NPUs can achieve peak throughputs of 140+ tokens/sec, sustained inference often triggers thermal throttling as the device surface temperature approaches $45^\circ$C. Furthermore, executing models within a Trusted Execution Environment (TEE), such as ARM CCA Realms, to protect model weights and user data introduces a measurable latency overhead of 8\%--22\% due to memory encryption and context-switching. In our simulations, a 3.8B SLM maintaining a power draw of 8W-10W caused the NPU frequency to drop by $40\%$ after only 180 seconds of continuous generation. Consequently, the "Sustained Efficiency" and "Secure Inference Throughput" are more representative metrics for 2026 AI deployment than raw peak performance.
+\begin{equation}
+\begin{aligned}
+v_{\mathrm{secure}}(t)
+&=v_{\mathrm{peak}}\alpha_T(t)(1-\delta_{\mathrm{TEE}}),\\
+\alpha_T(t)
+&=\min\left(1,\frac{T_{\max}-T_a}{R_\theta P(t)}\right).
+\end{aligned}
+\label{eq:sustained_secure}
+\end{equation}
+Here $\alpha_T$ models thermal headroom, $\delta_{\mathrm{TEE}}$ models confidentiality overhead, and $R_\theta$ is package thermal resistance.
 
 \section{Proposal for HW-SW Co-design}
 To overcome the memory-bound, thermal, and security limitations, we propose a Hardware-Software Co-design approach that optimizes both the compute datapath and the system-level scheduling.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[node distance=0.65cm and 0.95cm]
+    \node[stage=PanelGray, text width=2.7cm, minimum height=1.0cm] (agent) {Agent OS\\\footnotesize query, policy, context};
+    \node[stage=WarmGold!16, text width=2.8cm, minimum height=1.0cm, right=of agent] (scheduler) {AI Scheduler\\\footnotesize thermal/security route};
+    \node[stage=AlertRed!10, text width=2.8cm, minimum height=0.85cm, above right=0.35cm and 0.85cm of scheduler] (tee) {Realm / TEE\\\footnotesize encrypted weights};
+    \node[stage=CloudBlue!10, text width=3.1cm, minimum height=1.2cm, right=of scheduler] (npu) {Bit-Serial NPU\\\footnotesize ternary lanes + MAC bypass};
+    \node[stage=EdgeGreen!10, text width=3.1cm, minimum height=0.95cm, below=0.55cm of npu] (pim) {Sparsity-Aware PIM\\\footnotesize KV cache + zero skip};
+    \node[stage=PanelGray, text width=2.6cm, minimum height=0.95cm, right=of npu] (media) {Zero-Copy I/O\\\footnotesize audio, camera, sensor buffers};
+
+    \draw[flow] (agent) -- (scheduler);
+    \draw[flow] (scheduler) -- (npu);
+    \draw[softflow] (scheduler) -- (tee);
+    \draw[softflow] (tee) -- (npu);
+    \draw[flow] (pim) -- (npu);
+    \draw[flow] (media) -- (npu);
+    \draw[softflow] (npu) to[bend left=12] node[above,font=\sffamily\scriptsize] {tokens/actions} (agent);
+
+    \foreach \x in {-0.7,-0.35,0,0.35,0.7} {
+        \draw[fill=CloudBlue!28, draw=CloudBlue!75] ($(npu.south)+(\x,0.18)$) rectangle ++(0.22,0.28);
+    }
+
+    \node[metric, below=0.25cm of scheduler] (mthermal) {$T<T_{\max}$};
+    \node[metric, below=0.25cm of pim] (mmem) {$M_{\mathrm{KV}}$ stays local};
+    \node[metric, below=0.25cm of media] (mlat) {$L<200$ ms};
+    \draw[softflow] (mthermal) -- (mmem);
+    \draw[softflow] (mmem) -- (mlat);
+
+    \begin{scope}[on background layer]
+        \node[draw=AIInk!22, fill=PanelGray!42, rounded corners=3pt, fit=(tee)(npu)(pim)(media)(mthermal)(mmem)(mlat), inner sep=8pt] {};
+    \end{scope}
+\end{tikzpicture}
+\caption{Proposed mobile SoC execution path. The scheduler chooses precision, memory placement, and isolation level before dispatching work to a bit-serial NPU. PIM keeps the high-traffic KV cache near memory banks, while zero-copy I/O removes media handoff latency.}
+\label{fig:codesign_arch}
+\end{figure*}
 
 \subsection{Bit-Serial Datapaths for Ultra-Low Precision}
 Instead of conventional 32-bit arithmetic logic units (ALUs), we propose the adoption of \textit{Bit-Serial processing} within the NPU. By processing weights bit-by-bit, the hardware can dynamically scale its performance based on the model's bit-width. This architecture allows the 1.58-bit ternary models to bypass multiplication stages entirely, utilizing simple multiplexer-accumulators that consume significantly less silicon area and power.
 
 \subsection{Sustained Efficiency via Dynamic AI Scheduling}
 We propose a system-level \textit{AI Scheduler} that monitors the device's thermal envelope and security context. When the thermal limit is approached, the scheduler dynamically switches the model from its full 4-bit precision to a "low-power" 1.58-bit distilled variant. Additionally, for sensitive workloads, the scheduler can route inference to a hardware-isolated Realm, accepting the performance trade-off for enhanced privacy.
+\begin{equation}
+\begin{aligned}
+\pi^* &= \arg\min_{\pi\in\Pi}
+\lambda_L L_\pi + \lambda_E E_\pi + \lambda_S C_\pi,\\
+&\text{s.t.}\quad T_\pi<T_{\max},\quad M_\pi<M_{\max}.
+\end{aligned}
+\label{eq:scheduler}
+\end{equation}
+The policy $\pi$ jointly selects precision, memory tier, and isolation mode; $C_\pi$ captures the confidentiality cost.
 
 \subsection{Sparsity-Aware Processing-In-Memory (PIM)}
 We propose integrating compute capabilities directly into the DRAM bank buffers. This \textit{Sparsity-Aware PIM} architecture can skip zero-value weights in pruned models, effectively doubling the effective bandwidth. By keeping the high-traffic KV cache within the PIM-enabled banks, the data movement through the energy-intensive global memory bus is reduced by $80\%$.
+\begin{equation}
+B_{\mathrm{eff}}\approx
+\frac{B_{\mathrm{raw}}}{(1-s_z)(1-r_{\mathrm{reuse}})},
+\label{eq:pim_bandwidth}
+\end{equation}
+where $s_z$ is skipped sparsity and $r_{\mathrm{reuse}}$ is the fraction of KV traffic served locally by PIM-enabled banks.
 
 \subsection{Hierarchical Memory Architectures for Agentic AI}
 \label{subsec:ham}
@@ -133,6 +387,34 @@ The shift toward MoE architectures (e.g., Gemma 4 E2B) allows for "Sparse Multi-
     \item \textbf{Modality-Specific Experts:} Emerging mSLMs utilize dedicated experts for vision and audio tokens, preventing the cross-modal interference often seen in dense models.
     \item \textbf{Expert-wise Bitwidth Adaptation:} To manage the "Memory vs. Compute" paradox, where MoE models require large RAM residency despite sparse compute, researchers have introduced expert-wise quantization. Salient language experts are kept at 4-bit, while redundant visual experts are compressed to 1.58-bit.
 \end{itemize}
+\begin{equation}
+p_i=\operatorname{softmax}(\mathbf{W}_r\mathbf{h})_i,\qquad
+\mathbf{y}=\sum_{i\in\operatorname{TopK}(\mathbf{p},k)}p_i E_i(\mathbf{x}).
+\label{eq:moe_router}
+\end{equation}
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.55cm and 0.55cm]
+    \node[stage=PanelGray, text width=1.55cm] (tokens) {Tokens\\\footnotesize text\\vision\\audio};
+    \node[stage=WarmGold!16, text width=1.45cm, right=of tokens] (router) {Router\\\footnotesize Top-$k$};
+    \node[chip=CloudBlue!12, text width=1.35cm, above right=0.1cm and 0.55cm of router] (lang) {Language\\4-bit};
+    \node[chip=EdgeGreen!12, text width=1.35cm, right=of router] (vision) {Vision\\1.58-bit};
+    \node[chip=AlertRed!10, text width=1.35cm, below right=0.1cm and 0.55cm of router] (audio) {Audio\\2-bit};
+    \node[stage=PanelGray, text width=1.45cm, right=0.75cm of vision] (merge) {Merge\\\footnotesize sparse output};
+    \draw[flow] (tokens) -- (router);
+    \draw[softflow] (router) -- (lang);
+    \draw[flow] (router) -- (vision);
+    \draw[softflow] (router) -- (audio);
+    \draw[softflow] (lang) -- (merge);
+    \draw[flow] (vision) -- (merge);
+    \draw[softflow] (audio) -- (merge);
+\end{tikzpicture}%
+}
+\caption{Edge MoE execution. The router activates only a small expert subset, while expert-wise quantization keeps high-traffic experts precise and low-salience experts cheap.}
+\label{fig:moe_router}
+\end{figure}
 
 \subsection{Omni-modal Latency and Direct Speech-to-Speech Architecture}
 The most significant trend in 2026 is the collapse of the traditional modular pipeline (STT $\to$ LLM $\to$ TTS) into unified \textit{Direct Speech-to-Speech (S2S)} architectures. To achieve human-like interaction, models must break the "200ms Latency Barrier"—the threshold at which AI responses feel instantaneous and natural.
@@ -140,6 +422,13 @@ The most significant trend in 2026 is the collapse of the traditional modular pi
 Direct S2S models like \textit{Moshi} \cite{moshi2024} and \textit{Mini-Omni 2} utilize streaming neural codecs (e.g., Mimi) to process audio tokens in parallel with internal reasoning. This bypasses the text-to-speech bottleneck entirely, allowing for the preservation of prosody and emotional nuance. 
 
 To support these sub-200ms targets on edge devices, hardware must evolve toward \textit{Zero-Copy Audio/Video NPUs}. Traditional architectures suffer from high latency due to memory-copy operations between the Audio/ISP units and the NPU. Zero-Copy designs allow the NPU to directly access media buffers in a shared memory space, eliminating the CPU-mediated "handoff tax" and saving 20--30ms of critical pipeline time.
+\begin{equation}
+L_{\mathrm{S2S}}=L_{\mathrm{codec}}+L_{\mathrm{reason}}+L_{\mathrm{vocoder}}+L_{\mathrm{copy}},
+\qquad
+L_{\mathrm{copy}}\rightarrow 0
+\label{eq:s2s_latency}
+\end{equation}
+The zero-copy design goal is therefore explicit: spend the latency budget on reasoning and prosody, not buffer movement.
 
 \subsection{The Vision Token Inflation and Token Density}
 A primary bottleneck in Edge VLMs is "Vision Token Inflation." Conventional models generate thousands of tokens for a single high-resolution image, overwhelming the LLM backbone's context window. \textit{MiniCPM-V 2.6} \cite{minicpm_v_2025} addresses this through high "Token Density," utilizing a SigLip-400M \cite{siglip2023} encoder to compress a 1.8M pixel image into just 640 tokens. This $75\%$ reduction in token count is critical for enabling real-time video understanding on mobile NPUs.
@@ -158,6 +447,35 @@ In contrast, On-device RAG utilizes a local vector database to "inject" only rel
 
 \subsection{The "Self-Route" Hybrid Memory}
 We propose a \textit{Self-Route} architecture where the agentic OS dynamically chooses between RAG and CAG based on the query complexity. Simple queries (e.g., "Find the flight number") trigger RAG-retrieval, while complex reasoning tasks (e.g., "Summarize all my meetings from last month") trigger the activation of the long-context cache. This hybrid approach, coupled with the Hierarchical Agentic Memory proposed in Section \ref{subsec:ham}, provides the optimal balance between reasoning accuracy and energy efficiency.
+\begin{equation}
+\begin{aligned}
+a^*=\arg\min_{a\in\{\mathrm{RAG},\mathrm{CAG}\}}
+&\ \lambda_L L_a(q)+\lambda_M M_a+\lambda_E E_a\\
+&-\lambda_Q Q_a(q),
+\end{aligned}
+\label{eq:self_route}
+\end{equation}
+where $Q_a(q)$ estimates answer quality for query $q$ under each memory strategy.
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.6cm and 0.55cm]
+    \node[stage=PanelGray, text width=1.55cm] (query) {Query\\\footnotesize intent + context};
+    \node[draw=WarmGold!80!black, fill=WarmGold!14, diamond, aspect=1.8, align=center, inner sep=1.5pt, font=\sffamily\scriptsize, right=of query] (route) {Self\\Route};
+    \node[chip=EdgeGreen!12, text width=1.45cm, above right=0.1cm and 0.65cm of route] (rag) {RAG\\\footnotesize low memory};
+    \node[chip=CloudBlue!12, text width=1.45cm, below right=0.1cm and 0.65cm of route] (cag) {CAG\\\footnotesize deep context};
+    \node[stage=PanelGray, text width=1.45cm, right=2.3cm of route] (answer) {Answer\\\footnotesize grounded};
+    \draw[flow] (query) -- (route);
+    \draw[flow] (route) -- node[above,font=\sffamily\scriptsize] {lookup} (rag);
+    \draw[softflow] (route) -- node[below,font=\sffamily\scriptsize] {reason} (cag);
+    \draw[flow] (rag) -- (answer);
+    \draw[softflow] (cag) -- (answer);
+\end{tikzpicture}%
+}
+\caption{Self-Route memory control. The agent chooses retrieval when memory and energy dominate, and long-context caching when quality requires global reasoning over prior state.}
+\label{fig:self_route}
+\end{figure}
 
 \section{Adaptive Intelligence: On-Device Continuous Learning and Federated SLM}
 As AI transitions from static deployment to "Always-Learning" agents, the research focus in 2026 has pivoted toward \textit{On-Device Continuous Learning (ODCL)} and \textit{Federated SLM Optimization}. This transition addresses the need for deep personalization without compromising user privacy.
@@ -179,6 +497,13 @@ A significant trend in 2026 is the emergence of \textit{Self-Synthesizing Person
 
 \subsection{Parameter-Efficient Fine-Tuning (PEFT) on NPUs}
 To enable continuous adaptation on mobile devices, PEFT techniques have been optimized for NPU architectures. \textit{DoRA} (Weight-Decomposed Low-Rank Adaptation) \cite{dora2024} and \textit{Q-LoRA v2} allow for domain-specific fine-tuning with sub-200ms latency. By only updating a tiny fraction ($<$1\%) of parameters, these methods bring the training memory footprint closer to inference levels, enabling "Nested Learning" \cite{nested2026} where models self-refine based on user interactions.
+\begin{equation}
+\mathbf{W}'=\mathbf{W}+\frac{\alpha}{r}\mathbf{B}\mathbf{A},
+\qquad
+r\ll\min(d_{\mathrm{in}},d_{\mathrm{out}}).
+\label{eq:peft}
+\end{equation}
+Equation \ref{eq:peft} keeps the frozen base model resident while updating only low-rank adapters.
 
 \subsection{Training-Aware Hardware: Backpropagation Engines}
 We propose the integration of \textit{Training-Aware Hardware} featuring dedicated \textit{Backpropagation Engines}. These engines utilize:
@@ -189,6 +514,30 @@ We propose the integration of \textit{Training-Aware Hardware} featuring dedicat
 
 \subsection{Federated SLM: The "Minions" Framework}
 For multi-device environments, the \textit{Minions} framework \cite{minions2025} enables federated optimization of SLMs. Local devices perform PEFT updates on their respective data and share only the low-rank "delta-weights" with a central coordinator. This hybrid architecture ensures that raw personal data never leaves the device, while the global SLM benefits from collective intelligence without the risks associated with centralized data silos.
+\begin{equation}
+\Delta\mathbf{W}_{g}^{(t+1)}
+=\sum_{k=1}^{K}\frac{n_k}{\sum_j n_j}\Delta\mathbf{W}_{k}^{(t)},
+\label{eq:federated_delta}
+\end{equation}
+where device $k$ contributes only adapter deltas weighted by its local sample count $n_k$.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=0.65cm and 0.65cm]
+    \node[chip=CloudBlue!12, text width=1.3cm] (phone) {Phone\\$\Delta W_1$};
+    \node[chip=EdgeGreen!12, text width=1.3cm, below=0.3cm of phone] (watch) {Wearable\\$\Delta W_2$};
+    \node[chip=WarmGold!16, text width=1.3cm, below=0.3cm of watch] (pc) {PC\\$\Delta W_3$};
+    \node[stage=PanelGray, text width=1.6cm, right=1.0cm of watch] (coord) {Secure\\Aggregator};
+    \node[stage=AlertRed!8, text width=1.55cm, right=of coord] (global) {Global\\SLM Adapter};
+    \draw[flow] (phone) -- (coord);
+    \draw[flow] (watch) -- (coord);
+    \draw[flow] (pc) -- (coord);
+    \draw[flow] (coord) -- (global);
+    \node[metric, below=0.35cm of coord] {raw data never leaves device};
+\end{tikzpicture}
+\caption{Federated adapter learning: devices transmit low-rank updates, not prompts or local documents.}
+\label{fig:federated}
+\end{figure}
 
 \section{Secure Intelligence: On-Device Guardrails and Ethical AI}
 As autonomous mobile agents move from digital assistance to physical world interaction, the "Safety-Latency Trade-off" has emerged as a primary design bottleneck. By 2026, the industry is transitioning from probabilistic software guardrails to deterministic \textit{Hardware-Enforced Guardrails}.
@@ -207,6 +556,31 @@ With the enforcement of global mandates like the EU AI Act (Article 50) \cite{eu
     \item \textbf{Latency and Silicon Area Trade-offs:} Our simulations indicate that real-time signing adds a "Signing Tax" of 2--5ms per manifest. While negligible for text-based SLMs, this overhead becomes critical for 120fps generative video. To mitigate this, the OTF-SE utilizes parallel SHA-3 hashing units, requiring a 3.5\% increase in NPU die area but reducing the latency impact to under 0.8ms.
     \item \textbf{Hybrid Hardware-Software Watermarking (H2W):} To ensure robustness against metadata stripping, we propose a "Hybrid Hardware-Software" model that pairs cryptographic C2PA manifests with \textit{NPU-Accelerated Invisible Watermarking} (e.g., hardware-assisted SynthID \cite{synthid_2024}). The NPU's pixel-processing units embed persistent, imperceptible patterns directly into the tensor output, allowing provenance to be recovered even if the file is re-encoded or screenshotted.
 \end{itemize}
+\begin{equation}
+\sigma=\operatorname{Sign}_{sk_{\mathrm{NPU}}}
+\left(H(\mathbf{y})\Vert t\Vert \mathrm{deviceID}\right),
+\label{eq:provenance_signature}
+\end{equation}
+where $\sigma$ is the hardware-rooted signature over the generated tensor output $\mathbf{y}$, timestamp $t$, and device identity.
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.45cm]
+    \node[stage=CloudBlue!10, text width=1.45cm] (tensor) {Tensor\\Output};
+    \node[stage=WarmGold!16, text width=1.45cm, right=of tensor] (hash) {SHA-3\\Hash};
+    \node[stage=AlertRed!8, text width=1.45cm, right=of hash] (sign) {Secure\\Sign};
+    \node[stage=EdgeGreen!10, text width=1.45cm, right=of sign] (wm) {Invisible\\Water-\\mark};
+    \node[stage=PanelGray, text width=1.45cm, right=of wm] (media) {C2PA\\Media};
+    \draw[flow] (tensor) -- (hash);
+    \draw[flow] (hash) -- (sign);
+    \draw[flow] (sign) -- (wm);
+    \draw[flow] (wm) -- (media);
+\end{tikzpicture}%
+}
+\caption{Hardware-level content provenance pipeline. Signing and watermarking occur before output leaves the NPU trust boundary.}
+\label{fig:provenance}
+\end{figure}
 
 \subsection{Adversarial Robustness and Model Sanitization}
 As SLMs are increasingly deployed in high-stakes environments, protecting them against adversarial attacks—ranging from prompt injections to weight-level poisoning—is paramount. By 2026, the industry has transitioned from reactive software patches to proactive, hardware-enforced "Model Sanitization."
@@ -216,6 +590,15 @@ As SLMs are increasingly deployed in high-stakes environments, protecting them a
     \item \textbf{Layer-wise Activation Monitoring (LAM):} To counter real-time adversarial perturbations, LAM inspects internal model activations for "out-of-distribution" patterns characteristic of jailbreak attempts. Our research indicates that for a 3B parameter SLM, LAM introduces a 5\%--12\% latency "Security Tax" and requires an additional 150MB--400MB of VRAM for activation buffers.
     \item \textbf{Adversarial Perturbation Filtering:} Real-time trajectory analysis (e.g., TrajGuard) monitors the model's internal reasoning path, detecting malicious intent before the final tokens are generated. When paired with Adversarial Prompt Distillation (APD), these in-situ filters can neutralize >90\% of known injections with sub-10ms overhead.
 \end{itemize}
+\begin{equation}
+s_\ell=(\mathbf{a}_\ell-\boldsymbol{\mu}_\ell)^T
+\boldsymbol{\Sigma}_\ell^{-1}
+(\mathbf{a}_\ell-\boldsymbol{\mu}_\ell),
+\qquad
+\max_\ell s_\ell>\tau \Rightarrow \mathrm{halt}.
+\label{eq:lam}
+\end{equation}
+This Mahalanobis-style monitor turns layer activations into a deterministic hardware guardrail.
 
 \section{Future Horizons: Neuromorphic and Energy-Neutral AI}
 As we look beyond the 2026 NPU-centric paradigm, the research frontier is expanding into non-von Neumann architectures and "battery-free" edge intelligence. These technologies represent the next leap in HW-SW co-design, aiming for biological-grade efficiency.
@@ -226,6 +609,30 @@ The convergence of Neuromorphic Computing and SLMs is reaching a technical infle
     \item \textbf{Spike-Native SLMs:} Architectures like SpikeGPT \cite{spikegpt2025} replace the quadratic complexity of standard Self-Attention with linear-complexity spiking mechanisms. These models process "graded spikes," allowing 1B-3B parameter SLMs to operate on milliwatt-level power budgets.
     \item \textbf{Hybrid C-Transformers:} A dominant trend for 2027 is the "Complementary Transformer," which uses traditional NPU cores for high-precision reasoning and SNN cores for always-on background tasks, achieving up to 1,000$\times$ better energy efficiency than current mobile GPUs.
 \end{itemize}
+\begin{equation}
+E_{\mathrm{SNN}}\approx N_{\mathrm{spike}}E_{\mathrm{spike}},
+\qquad
+N_{\mathrm{spike}}\ll N_{\mathrm{MAC}}.
+\label{eq:snn_energy}
+\end{equation}
+The energy argument is event sparsity: idle neurons consume nearly zero dynamic energy.
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.55cm]
+    \node[stage=CloudBlue!10, text width=1.75cm] (npu) {2026\\NPU};
+    \node[stage=EdgeGreen!10, text width=1.75cm, right=of npu] (snn) {2027\\SNN cores};
+    \node[stage=WarmGold!16, text width=1.75cm, right=of snn] (optical) {2027+\\Photonic I/O};
+    \node[stage=AlertRed!8, text width=1.75cm, right=of optical] (ambient) {Ambient\\AI};
+    \draw[flow] (npu) -- node[above,font=\sffamily\scriptsize] {sparse events} (snn);
+    \draw[flow] (snn) -- node[above,font=\sffamily\scriptsize] {bandwidth} (optical);
+    \draw[flow] (optical) -- node[above,font=\sffamily\scriptsize] {energy-neutral} (ambient);
+\end{tikzpicture}%
+}
+\caption{Long-horizon hardware trajectory from dense NPU inference toward sparse, photonic, and energy-neutral edge intelligence.}
+\label{fig:future_map}
+\end{figure}
 
 \subsection{Optical AI Accelerators and the "Copper Wall"}
 To handle the massive bandwidth requirements of trillion-parameter models and ultra-fast SLM inference, the industry is transitioning from electrical to photonic interconnects. Co-Packaged Optics (CPO) \cite{cpo2027} integrate optical interfaces directly onto the NPU package, reducing rack-level power consumption by 40\%. By 2027, 1.6T and 3.2T optical modules will enable "All-Optical" data paths where data remains in the photonic domain during the entire inference cycle, overcoming the "Copper Wall" of electrical latency.
@@ -246,6 +653,29 @@ The core of Swarm Intelligence is \textit{Collaborative Swarm Inference}, a meth
     \item \textbf{Layer-wise Partitioning:} By splitting the 32 layers of an 8B model, the smartphone can handle the initial layers (embedding and early attention) while the PC's more powerful NPU handles the deep reasoning layers.
     \item \textbf{Dynamic Load Balancing:} The swarm OS monitors the available FLOPS and thermal headroom of each device in real-time, dynamically reallocating layers to maintain the 200ms "natural interaction" barrier.
 \end{itemize}
+\begin{equation}
+d^*(\ell)=\arg\min_{d\in\mathcal{D}}
+\left(\frac{C_\ell}{F_d}+\frac{A_\ell}{B_{d\leftrightarrow u}}+\lambda_T T_d\right),
+\label{eq:swarm_partition}
+\end{equation}
+where layer $\ell$ is assigned to the device with the best compute, network, and thermal trade-off.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=0.7cm and 0.75cm]
+    \node[stage=CloudBlue!10, text width=1.55cm] (phone) {Phone\\L1--L8};
+    \node[stage=EdgeGreen!10, text width=1.55cm, right=of phone] (tablet) {Tablet\\L9--L16};
+    \node[stage=WarmGold!16, text width=1.55cm, right=of tablet] (pc) {PC\\L17--L32};
+    \node[metric, below=0.45cm of tablet] (bus) {Wi-Fi 7/8 as low-latency bus};
+    \draw[flow] (phone) -- node[above,font=\sffamily\scriptsize] {$A_\ell$} (tablet);
+    \draw[flow] (tablet) -- node[above,font=\sffamily\scriptsize] {$A_\ell$} (pc);
+    \draw[softflow] (bus) -- (phone);
+    \draw[softflow] (bus) -- (tablet);
+    \draw[softflow] (bus) -- (pc);
+\end{tikzpicture}
+\caption{Collaborative NPU worksharing partitions model layers across the user's personal devices while treating the local network as a short-range accelerator backplane.}
+\label{fig:swarm}
+\end{figure}
 
 \subsection{Multi-Device KV-Cache Offloading via Wi-Fi 7 and 8}
 The most significant hurdle in distributed inference is the "Distributed Memory Wall"—the latency and bandwidth cost of moving Key-Value (KV) caches across the network. For a 128K context window, the KV-cache of an 8B model can exceed 10GB.
