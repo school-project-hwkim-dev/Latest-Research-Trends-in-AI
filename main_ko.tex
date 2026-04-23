@@ -80,7 +80,7 @@
 \begin{minipage}{0.86\textwidth}
 \small
 \noindent\textbf{Abstract}\quad
-This paper explains the recent move from cloud-based large language models to on-device small language models in an easy-to-read way. Cloud AI is powerful, but it can be expensive, slow when the network is poor, and sensitive for private data. On-device AI runs a smaller model directly on a phone, laptop, car, or wearable device. To make this practical, the model must use less memory, the chip must move data efficiently, and the system must choose the right place to run each task. This paper focuses on simple ideas such as quantization, cache compression, mobile NPU scheduling, privacy protection, and personal-device collaboration.
+This paper explains the recent move from cloud-based large language models to on-device small language models in an easy-to-read way. Cloud AI is powerful, but it can be expensive, slow when the network is poor, and sensitive for private data. On-device AI runs a smaller model directly on a phone, laptop, car, or wearable device. To make this practical, the model must use less memory, the chip must move data efficiently, and the system must choose the right place to run each task. The paper also introduces Google DeepMind's AlphaEvolve as an example of AI that searches for better algorithms by writing, testing, and improving code. This paper focuses on simple ideas such as quantization, cache compression, mobile NPU scheduling, privacy protection, and personal-device collaboration.
 \vspace{4pt}
 
 \noindent\textbf{Key Words}: On-device AI, Small Language Model, Quantization, Mobile NPU, Privacy, Edge AI
@@ -123,6 +123,43 @@ This paper explains the recent move from cloud-based large language models to on
 \caption{클라우드 AI에서 온디바이스 AI로 이동하는 이유. 핵심은 작은 기기에서 빠르고 오래 쓸 수 있게 만드는 것이다.}
 \label{fig:ko_bigpicture}
 \end{figure}
+
+\section{새로운 흐름: 알고리즘을 개선하는 AI}
+지금까지의 생성형 AI는 주로 글을 쓰거나 질문에 답하는 도구로 이해되었다. 그런데 Google DeepMind의 AlphaEvolve는 조금 다른 방향을 보여준다. AlphaEvolve는 답변 문장을 만드는 데서 끝나지 않고, 코드로 표현된 알고리즘을 직접 바꾸고, 실행해 보고, 점수를 비교하면서 더 나은 알고리즘을 찾는다 \cite{deepmind_alphaevolve_2025}.
+
+직관적으로 말하면 다음과 같다.
+\begin{center}
+\small
+\textbf{아이디어 만들기} $\rightarrow$ \textbf{코드 실행} $\rightarrow$ \textbf{점수 매기기} $\rightarrow$ \textbf{좋은 아이디어 다시 사용}
+\end{center}
+이 과정이 반복되면, 사람이 처음에 넣은 단순한 코드보다 더 좋은 코드가 나올 수 있다. 여기서 중요한 점은 ``AI가 말했다''가 아니라 ``테스트를 통과했고 점수가 좋아졌다''이다.
+
+\begin{figure}[H]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[node distance=0.5cm and 0.55cm]
+    \node[stage=PanelGray, text width=1.65cm] (human) {사람\\\footnotesize 문제와 점수 정의};
+    \node[stage=CloudBlue!10, text width=1.65cm, right=of human] (llm) {LLM\\\footnotesize 코드 수정 제안};
+    \node[stage=WarmGold!16, text width=1.65cm, right=of llm] (test) {평가기\\\footnotesize 실행/검증};
+    \node[stage=EdgeGreen!10, text width=1.65cm, right=of test] (db) {저장소\\\footnotesize 좋은 코드 보관};
+
+    \draw[flow] (human) -- (llm);
+    \draw[flow] (llm) -- (test);
+    \draw[flow] (test) -- (db);
+    \draw[softflow] (db) to[bend left=22] node[below,font=\sffamily\scriptsize] {다음 세대에 재사용} (llm);
+
+    \node[chip=CloudBlue!10, text width=1.55cm, below=0.45cm of llm] (a) {스케줄링};
+    \node[chip=EdgeGreen!10, text width=1.55cm, right=0.28cm of a] (b) {커널 최적화};
+    \node[chip=AlertRed!8, text width=1.55cm, right=0.28cm of b] (c) {칩 회로};
+\end{tikzpicture}%
+}
+\caption{AlphaEvolve의 핵심 흐름. 사람이 평가 기준을 만들고, AI는 코드를 바꿔 가며 더 높은 점수를 찾는다.}
+\label{fig:ko_alphaevolve}
+\end{figure}
+
+Google DeepMind는 AlphaEvolve가 여러 실제 문제에서 성과를 냈다고 보고했다. 예를 들어 데이터센터 스케줄링을 개선해 전 세계 컴퓨팅 자원의 약 0.7\%를 회수했고, TPU 회로의 불필요한 부분을 줄이는 Verilog 수준의 수정을 제안했으며, Gemini 학습에 쓰이는 행렬 곱셈 커널을 더 빠르게 만들었다 \cite{deepmind_alphaevolve_2025}. 또한 4$\times$4 복소수 행렬 곱셈에서 48번의 스칼라 곱셈만 사용하는 방법을 찾는 등 수학적 알고리즘 발견에도 활용되었다.
+
+이 내용이 온디바이스 AI 논문에 중요한 이유는 간단하다. 작은 모델을 빠르게 돌리려면 양자화만 잘하면 되는 것이 아니다. 어떤 커널을 쓸지, 메모리를 어떻게 배치할지, NPU와 CPU 중 어디에 일을 맡길지 같은 선택도 매우 중요하다. AlphaEvolve식 반복 탐색은 이런 선택을 자동으로 실험하고 개선할 수 있는 가능성을 보여준다. 따라서 앞으로의 하드웨어-소프트웨어 공동 설계는 사람이 규칙을 모두 손으로 짜는 방식에서, 사람이 목표를 정하고 AI가 후보 설계를 많이 시험하는 방식으로 확장될 수 있다.
 
 \section{핵심 개념: 모델을 가볍게 만들기}
 \subsection{양자화}

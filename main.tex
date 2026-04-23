@@ -66,7 +66,7 @@
 \maketitle
 
 \begin{abstract}
-The success of Large Language Models (LLMs) has been primarily driven by massive cloud-based computing clusters. However, the escalating operational costs, energy consumption, and concerns regarding data privacy and latency have necessitated a shift toward On-device AI and Small Language Models (SLMs). This paper analyzes the current trends in model compression, specifically quantization and pruning, and evaluates their efficacy through empirical simulations. Our results demonstrate that while software-level optimization significantly reduces memory footprints, the inherent memory-bound nature of general-purpose hardware remains a critical bottleneck. We propose a hardware-software co-design approach, integrating specialized AI accelerators to maximize inference efficiency.
+The success of Large Language Models (LLMs) has been primarily driven by massive cloud-based computing clusters. However, the escalating operational costs, energy consumption, and concerns regarding data privacy and latency have necessitated a shift toward On-device AI and Small Language Models (SLMs). This paper analyzes the current trends in model compression, specifically quantization and pruning, and evaluates their efficacy through empirical simulations. We also discuss Google DeepMind's AlphaEvolve as a recent example of AI-assisted algorithm discovery, where language models and automatic evaluators search for better algorithms and system heuristics. Our results demonstrate that while software-level optimization significantly reduces memory footprints, the inherent memory-bound nature of general-purpose hardware remains a critical bottleneck. We propose a hardware-software co-design approach, integrating specialized AI accelerators to maximize inference efficiency.
 \end{abstract}
 
 \section{Introduction}
@@ -101,6 +101,49 @@ Consequently, the research frontier in 2026 is shifting toward "Autonomous Edge 
 \caption{Paper roadmap: the central argument moves from cloud-scale model capability to edge-scale sustained intelligence. Visual emphasis is placed on the compression, memory, security, and scheduling constraints that determine whether an SLM can run continuously on-device.}
 \label{fig:roadmap}
 \end{figure*}
+
+\section{A New Direction: AI That Improves Algorithms}
+Most on-device AI discussions focus on making a model smaller. AlphaEvolve, announced by Google DeepMind in 2025, points to a different but related trend: using AI to improve the algorithms and systems that run AI itself \cite{deepmind_alphaevolve_2025}. Instead of asking a model to directly output a final answer, AlphaEvolve asks language models to propose code changes, runs those changes through automatic evaluators, stores the best candidates, and repeats the loop.
+
+The key idea is simple. A human defines the problem and the scoring rule; the system searches for code that scores better:
+\begin{equation}
+c^*=\arg\max_{c\in\mathcal{C}} S(c),
+\label{eq:alphaevolve_objective}
+\end{equation}
+where $c$ is a candidate program and $S(c)$ is an automatic score such as speed, correctness, memory use, or mathematical quality. This matters for this paper because hardware-software co-design also needs measurable feedback. If a scheduler, kernel, or circuit rewrite can be tested automatically, an AlphaEvolve-style loop can search for better implementations faster than manual tuning alone.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 0.85cm]
+    \node[stage=PanelGray, text width=2.7cm, minimum height=0.95cm] (problem)
+        {Human task\\\footnotesize problem + score};
+    \node[stage=CloudBlue!10, text width=2.7cm, minimum height=0.95cm, right=of problem] (llm)
+        {Gemini models\\\footnotesize propose code edits};
+    \node[stage=WarmGold!16, text width=2.7cm, minimum height=0.95cm, right=of llm] (eval)
+        {Evaluator\\\footnotesize run tests + measure};
+    \node[stage=EdgeGreen!10, text width=2.7cm, minimum height=0.95cm, right=of eval] (db)
+        {Program database\\\footnotesize keep strong ideas};
+
+    \draw[flow] (problem) -- (llm);
+    \draw[flow] (llm) -- (eval);
+    \draw[flow] (eval) -- (db);
+    \draw[softflow] (db.north) to[bend left=20] node[above,font=\sffamily\scriptsize] {sample parents for next round} (llm.north);
+
+    \node[chip=CloudBlue!10, text width=2.4cm, below=0.62cm of llm] (infra)
+        {Data-center\\scheduling};
+    \node[chip=EdgeGreen!10, text width=2.4cm, right=0.45cm of infra] (kernel)
+        {Matrix kernels\\and attention};
+    \node[chip=AlertRed!8, text width=2.4cm, right=0.45cm of kernel] (circuit)
+        {TPU circuit\\simplification};
+    \draw[softflow] (eval) -- (kernel);
+\end{tikzpicture}
+\caption{AlphaEvolve-style algorithm discovery. The important shift is the closed loop: code is proposed, executed, scored, and used as feedback for the next generation. This makes algorithm design look more like an engineering search problem.}
+\label{fig:alphaevolve_loop}
+\end{figure*}
+
+Google reports several concrete outcomes: a data-center scheduling heuristic that recovered about 0.7\% of worldwide compute resources, a Verilog-level simplification for a TPU arithmetic circuit, a 23\% speedup for a matrix multiplication kernel used in Gemini training, and new matrix multiplication constructions including a 4$\times$4 complex-valued case using 48 scalar multiplications \cite{deepmind_alphaevolve_2025}. Later Google Research work also used AlphaEvolve as a research partner for theoretical computer science, showing that the same loop can help search for proof components that are still checked by formal or computational criteria \cite{google_research_alphaevolve_tcs_2025}.
+
+For edge AI, the lesson is practical: the next optimization step may not be just ``compress the model.'' It may be ``let an AI-assisted search system find a better kernel, memory policy, or routing heuristic, then verify it with tests.'' In the rest of this paper, quantization, memory hierarchy, scheduling, and security are therefore treated as parts of one measurable design space.
 
 \section{Trends in Model Compression}
 To deploy LLMs on resource-constrained devices, model compression is essential.
