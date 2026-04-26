@@ -1,16 +1,4 @@
-# Ignore everything except the paper files.
-*
-
-!main.tex
-!main.pdf
-!main_ko.tex
-!main_ko.pdf
-!references.bib
-!README.md
-!.latexmkrc
-!.gitignore
-
-# LaTeX build output
+# LaTeX build artifacts
 *.aux
 *.log
 *.out
@@ -20,18 +8,80 @@
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+*.xdv
+.md
+최신 방안
+작년예시
+archive
+3안평가
+2안평가
+1안 평가
+최신 방안
 
-# Local notes and generated helper files
+./최신 방안
+./작년예시
+./archive
+./3안평가
+./2안평가
+./1안 평가
+./최신 방안
+
+최신 방안/
+작년예시/
+archive/
+3안평가/
+2안평가/
+1안 평가/
+최신 방안/
+
+
+.최신 방안/
+.작년예시/
+.archive/
+.3안평가/
+.2안평가/
+.1안 평가/
+.최신 방안/
+
+
+.최신 방안
+.작년예시
+.archive
+.3안평가
+.2안평가
+.1안 평가
+.최신 방안
+
+
+# OS / editor
+.DS_Store
+.env
+.json
+
+.md
+
+*.md
+
+# AI config
 GEMINI.md
 agents.md
+.gemini/
+.claude/
+TODO.md
+수식_설명.md
+*.bib
+*.fls
+*.log
+*.aux
+*.blg
+*.fdb_latexmk
+*.out
+*.tex
+*.md
+*.mkrc
+
+# Old working files
 paper_peer_review.md
 paper_peer_review_v2.md
 run_agent_paper.py
 plan.md
-ROADMAP.md
-.gemini/
-.env
-.DS_Store
-
-
-작년예시
