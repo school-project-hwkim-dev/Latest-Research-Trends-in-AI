@@ -61,6 +61,7 @@ archive/
 .md
 
 *.md
+!Transformer_OnDevice_SLM_발표_5안.pdf
 
 # AI config
 GEMINI.md
